@@ -36,10 +36,18 @@ namespace RevitAIAssistant.UI
                 return;
             }
 
-            _aiService = new TogetherAIService(apiKey);
-            
-            // Initialize the UI
-            InitializeUI();
+            try
+            {
+                _aiService = new TogetherAIService(apiKey);
+                // Initialize the UI
+                InitializeUI();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error initializing AI service: {ex.Message}", "Initialization Error", 
+                              MessageBoxButton.OK, MessageBoxImage.Error);
+                this.Close();
+            }
         }
 
         private string GetApiKey()
@@ -351,6 +359,12 @@ namespace RevitAIAssistant.UI
         private void SettingsButton_Click(object sender, RoutedEventArgs e)
         {
             ShowApiKeyDialog();
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            _aiService?.Dispose();
+            base.OnClosed(e);
         }
     }
 }

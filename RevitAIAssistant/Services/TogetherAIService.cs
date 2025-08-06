@@ -4,14 +4,15 @@ using System.Configuration;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using System.Linq;
 using Newtonsoft.Json;
 using RevitAIAssistant.Models;
 
 namespace RevitAIAssistant.Services
 {
-    public class TogetherAIService
+    public class TogetherAIService : IDisposable
     {
-        private static readonly HttpClient _httpClient = new HttpClient();
+        private readonly HttpClient _httpClient;
         private const string API_BASE_URL = "https://api.together.xyz/v1/chat/completions";
         private readonly string _apiKey;
 
@@ -19,10 +20,9 @@ namespace RevitAIAssistant.Services
         {
             _apiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
             
-            if (!_httpClient.DefaultRequestHeaders.Contains("Authorization"))
-            {
-                _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiKey}");
-            }
+            _httpClient = new HttpClient();
+            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiKey}");
+            _httpClient.Timeout = TimeSpan.FromSeconds(30);
         }
 
         public async Task<string> SendMessageAsync(List<ChatMessage> messages, string systemPrompt = null)
@@ -117,6 +117,11 @@ When discussing technical solutions, consider the user's experience level and pr
             {
                 return false;
             }
+        }
+
+        public void Dispose()
+        {
+            _httpClient?.Dispose();
         }
     }
 }
