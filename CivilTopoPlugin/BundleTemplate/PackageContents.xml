@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ApplicationPackage
+  SchemaVersion="1.0"
+  AutodeskProduct="AutoCAD"
+  Name="CivilTopoPlugin"
+  AppVersion="1.0.0"
+  ProductType="Application"
+  Description="Plugin de topografia, georreferenciamento e memorial descritivo para Civil 3D."
+  Author="CivilTopoPlugin"
+  FriendlyVersion="1.0.0"
+  HelpFile="">
+  <CompanyDetails Name="CivilTopoPlugin" Url="" Email="" />
+  <Components>
+    <RuntimeRequirements
+      OS="Win64"
+      Platform="AutoCAD*"
+      SeriesMin="R24.1"
+      SeriesMax="R25.0" />
+    <ComponentEntry
+      AppName="CivilTopoPlugin"
+      ModuleName="./Contents/Windows/CivilTopoPlugin.dll"
+      AppDescription="CivilTopoPlugin - Fluxo topográfico brasileiro"
+      LoadOnAutoCADStartup="True"
+      LoadOnCommandInvocation="True" />
+  </Components>
+</ApplicationPackage>

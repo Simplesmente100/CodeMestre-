@@ -1,0 +1,86 @@
+name: Build Installer (ZIP + EXE)
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Versão sem prefixo v (ex.: 1.0.0). Em branco usa tag atual/sha curto"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v2
+
+      - name: Restore NuGet packages
+        shell: pwsh
+        run: nuget restore CivilTopoPlugin/CivilTopoPlugin.csproj
+
+      - name: Build plugin (Release|x64)
+        shell: pwsh
+        run: msbuild CivilTopoPlugin/CivilTopoPlugin.csproj /t:Build /p:Configuration=Release /p:Platform=x64
+        continue-on-error: true
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup -y --no-progress
+
+      - name: Resolve version
+        id: ver
+        shell: pwsh
+        run: |
+          $inputVersion = "${{ github.event.inputs.version }}"
+          if ($inputVersion) {
+            $v = $inputVersion
+          } elseif ("${{ github.ref_type }}" -eq "tag") {
+            $v = "${{ github.ref_name }}"
+          } else {
+            $v = "ci-${{ github.run_number }}-${{ github.sha }}".Substring(0,18)
+          }
+          if ($v.StartsWith("v")) { $v = $v.Substring(1) }
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Resolve DLL path
+        id: dll
+        shell: pwsh
+        run: |
+          $dll = "CivilTopoPlugin/bin/Release/net48/CivilTopoPlugin.dll"
+          if (-not (Test-Path $dll)) {
+            throw "DLL não encontrada em '$dll'. O build pode ter falhado por ausência de DLLs do Civil 3D no runner."
+          }
+          "path=$dll" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Build ZIP + EXE installer
+        shell: pwsh
+        run: |
+          cd CivilTopoPlugin/Installer
+          ./Build-Installer.ps1 -PluginDllPath "${{ steps.dll.outputs.path }}" -Version "${{ steps.ver.outputs.version }}"
+
+      - name: Upload artifacts (workflow)
+        uses: actions/upload-artifact@v4
+        with:
+          name: CivilTopoPlugin-${{ steps.ver.outputs.version }}
+          path: CivilTopoPlugin/artifacts/*
+
+      - name: Attach artifacts to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            CivilTopoPlugin/artifacts/*.zip
+            CivilTopoPlugin/artifacts/*.exe
